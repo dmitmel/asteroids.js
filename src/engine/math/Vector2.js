@@ -1,7 +1,8 @@
+import { lerp } from './index';
+
 export default class Vector2 {
   constructor(x, y) {
-    this.x = x;
-    this.y = y;
+    this.set(x, y);
   }
 
   static random() {
@@ -12,78 +13,91 @@ export default class Vector2 {
     return Math.sqrt(this.x * this.x + this.y * this.y);
   }
 
+  get sqrLength() {
+    return this.x * this.x + this.y * this.y;
+  }
+
   copy() {
     return new Vector2(this.x, this.y);
+  }
+
+  set(x, y) {
+    if (arguments.length < 2) {
+      if (x instanceof Vector2) {
+        this.x = x.x;
+        this.y = x.y;
+      } else {
+        this.x = this.y = x;
+      }
+    } else {
+      this.x = x;
+      this.y = y;
+    }
+    return this;
   }
 
   toString() {
     return `(${this.x}, ${this.y})`;
   }
 
-  lerp(v, t) {
-    return v
-      .copy()
-      .minus(this)
-      .times(t)
-      .plus(this);
+  lerp(b, t) {
+    return this.set(lerp(this.x, b.x, t), lerp(this.y, b.y, t));
   }
 
   plus(b) {
-    if (b instanceof Vector2) {
-      this.x += b.x;
-      this.y += b.y;
-    } else {
-      this.x += b;
-      this.y += b;
-    }
-    return this;
+    return b instanceof Vector2
+      ? this.set(this.x + b.x, this.y + b.y)
+      : this.set(this.x + b, this.y + b);
   }
 
   minus(b) {
-    if (b instanceof Vector2) {
-      this.x -= b.x;
-      this.y -= b.y;
-    } else {
-      this.x -= b;
-      this.y -= b;
-    }
-    return this;
+    return b instanceof Vector2
+      ? this.set(this.x - b.x, this.y - b.y)
+      : this.set(this.x - b, this.y - b);
   }
 
   times(b) {
-    if (b instanceof Vector2) {
-      this.x *= b.x;
-      this.y *= b.y;
-    } else {
-      this.x *= b;
-      this.y *= b;
-    }
-    return this;
+    return b instanceof Vector2
+      ? this.set(this.x * b.x, this.y * b.y)
+      : this.set(this.x * b, this.y * b);
   }
 
   div(b) {
-    if (b instanceof Vector2) {
-      this.x /= b.x;
-      this.y /= b.y;
-    } else {
-      this.x /= b;
-      this.y /= b;
-    }
-    return this;
+    return b instanceof Vector2
+      ? this.set(this.x / b.x, this.y / b.y)
+      : this.set(this.x / b, this.y / b);
   }
 
-  distance(v) {
-    return v.copy().minus(this).length;
+  negate() {
+    this.set(-this.x, -this.y);
+  }
+
+  distance(b) {
+    const dx = b.x - this.x;
+    const dy = b.y - this.y;
+    return Math.sqrt(dx * dx + dy * dy);
   }
 
   normalize() {
-    return this.div(this.length);
+    const len = this.length;
+    return len > 0 ? this.set(this.x / len, this.y / len) : this.set(0);
   }
 
-  direction(v) {
-    return v
-      .copy()
-      .minus(this)
-      .normalize();
+  direction(b) {
+    this.x = b.x - this.x;
+    this.y = b.y - this.y;
+    this.normalize();
+    return this;
+  }
+
+  dot(b) {
+    return this.x * b.x + this.y * b.y;
+  }
+
+  rotate(angle) {
+    return this.set(
+      this.x * Math.cos(angle) - this.y * Math.sin(angle),
+      this.x * Math.sin(angle) + this.y * Math.cos(angle)
+    );
   }
 }

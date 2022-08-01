@@ -7,9 +7,11 @@ function msToSec(ms) {
 export default class Ticker {
   prevTime = 0;
   time = 0;
+  deltaTime = 0;
   _accumulatedTime = 0;
   maxFps = 60;
   fps = 0;
+  maxUpdatesPerFrame = Infinity;
 
   started = false;
   frameID = 0;
@@ -18,15 +20,14 @@ export default class Ticker {
     if (!this.started) {
       this.started = true;
 
-      this.time = msToSec(
+      this.prevTime = this.time = msToSec(
         // rAF internally uses performance.now() to get current time
         performance.now()
       );
-      this.prevTime = this.time;
 
       this.onStart && this.onStart();
       // render the very first frame
-      this.onRender && this.onRender();
+      if (this.started) this.onRender && this.onRender();
       this._nextFrame();
     }
   }
@@ -39,26 +40,36 @@ export default class Ticker {
 
   _handleFrame = timestamp => {
     this.time = msToSec(timestamp);
+    this.deltaTime = this.time - this.prevTime;
 
-    const timePerFrame = 1 / this.maxFps;
+    // skip this frame if the frame rate is too low
+    if (this.deltaTime < 1000) {
+      const timePerFrame = 1 / this.maxFps;
 
-    // throttle the frame rate
-    if (this.time >= this.prevTime + timePerFrame) {
-      this.deltaTime = this.time - this.prevTime;
-      // note `+=` here: there can be some accumulated time from the previous
-      // frame
-      this._accumulatedTime += this.deltaTime;
-      this.prevTime = this.time;
-      this.fps = 1 / this.deltaTime;
+      if (this.time >= this.prevTime + timePerFrame) {
+        // note `+=` here: there can be some accumulated time from the previous
+        // frame
+        this._accumulatedTime += this.deltaTime;
+        this.prevTime = this.time;
+        this.fps = 1 / this.deltaTime;
 
-      // use loop to catch up
-      while (this._accumulatedTime >= timePerFrame) {
-        this.onUpdate && this.onUpdate();
-        this._accumulatedTime -= timePerFrame;
+        let updatesPerFrame = 0;
+        // use loop to catch up
+        while (this.started && this._accumulatedTime >= timePerFrame) {
+          // sanity check
+          if (updatesPerFrame > this.maxUpdatesPerFrame) {
+            this._accumulatedTime = 0;
+            break;
+          }
+          updatesPerFrame++;
+
+          this.onUpdate && this.onUpdate();
+          this._accumulatedTime -= timePerFrame;
+        }
+
+        // render once per frame
+        if (this.started) this.onRender && this.onRender();
       }
-
-      // render once per frame
-      this.onRender && this.onRender();
     }
 
     this._nextFrame();

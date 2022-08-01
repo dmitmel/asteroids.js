@@ -3,5 +3,9 @@ export function random(min, max) {
 }
 
 export function lerp(a, b, t) {
-  return (b - a) * t + a;
+  return a + (b - a) * clamp(t, 0, 1);
+}
+
+export function clamp(value, min, max) {
+  return value < min ? min : value > max ? max : value;
 }
